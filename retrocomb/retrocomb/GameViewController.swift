@@ -18,12 +18,18 @@ class GameViewController: UIViewController {
         guard let view = self.view as? SKView else { return }
         
         view.ignoresSiblingOrder = true
+
+        #if DEBUG
         view.showsFPS = true
         view.showsNodeCount = true
-        
-        // Enable debug drawing if needed
         // view.showsPhysics = true
         // view.showsDrawCount = true
+        #else
+        view.showsFPS = false
+        view.showsNodeCount = false
+        view.showsPhysics = false
+        view.showsDrawCount = false
+        #endif
     }
     
     override func viewWillAppear(_ animated: Bool) {

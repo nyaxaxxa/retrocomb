@@ -39,6 +39,22 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
     private var sizeLabel: SKLabelNode!
     
     private var lastUpdateTime: TimeInterval = 0
+    private var aiTickAccumulator: TimeInterval = 0
+    private var mergeTickAccumulator: TimeInterval = 0
+    private var minimapTickAccumulator: TimeInterval = 0
+    private var collectibleCursor = 0
+    private var coinCursor = 0
+
+    private enum Performance {
+        static let maxParticles = 160
+        static let maxFoods = 180
+        static let maxCoins = 150
+        static let collectibleBatchSize = 120
+        static let aiTickInterval: TimeInterval = 1.0 / 20.0
+        static let mergeTickInterval: TimeInterval = 1.0 / 6.0
+        static let minimapTickInterval: TimeInterval = 1.0 / 15.0
+        static let interactionPadding: CGFloat = 80
+    }
     
     // World and camera
     private let worldWidth = GameConfig.Level3.worldWidth
@@ -190,7 +206,7 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
     }
     
     private func setupFood() {
-        for _ in 0..<GameConfig.Level3.foodCount {
+        for _ in 0..<min(GameConfig.Level3.foodCount, Performance.maxFoods) {
             let x = CGFloat.random(in: 50...(worldWidth - 50))
             let y = CGFloat.random(in: 50...(worldHeight - 50))
             
@@ -199,8 +215,7 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
             foods.append(food)
         }
         
-        // Spawn coins - больше в большом мире
-        for _ in 0..<150 {  // Увеличено с 30 до 150
+        for _ in 0..<Performance.maxCoins {
             let x = CGFloat.random(in: 200...(worldWidth - 200))
             let y = CGFloat.random(in: 200...(worldHeight - 200))
             
@@ -394,6 +409,16 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
         
         let deltaTime = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
+
+        aiTickAccumulator += deltaTime
+        mergeTickAccumulator += deltaTime
+        minimapTickAccumulator += deltaTime
+        let shouldRunAITick = aiTickAccumulator >= Performance.aiTickInterval
+        let shouldRunMergeTick = mergeTickAccumulator >= Performance.mergeTickInterval
+        let shouldRunMinimapTick = minimapTickAccumulator >= Performance.minimapTickInterval
+        if shouldRunAITick { aiTickAccumulator = 0 }
+        if shouldRunMergeTick { mergeTickAccumulator = 0 }
+        if shouldRunMinimapTick { minimapTickAccumulator = 0 }
         
         // Handle input
         if !isAIMode {
@@ -443,8 +468,19 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
         updateCamera()
         
         // Update enemies
+        let playerCollisionRadius = player.sizeMultiplier * 25
+        let interactionRadius = GameConfig.Level3.enemyAggressionRange + Performance.interactionPadding
+        let interactionRadiusSquared = interactionRadius * interactionRadius
+
         for enemy in enemies where enemy.isAlive {
-            enemy.updateAI(playerPosition: player.position, worldBounds: CGSize(width: worldWidth, height: worldHeight))
+            let dxToPlayer = enemy.position.x - player.position.x
+            let dyToPlayer = enemy.position.y - player.position.y
+            let distanceSquared = dxToPlayer * dxToPlayer + dyToPlayer * dyToPlayer
+
+            if shouldRunAITick && distanceSquared <= interactionRadiusSquared {
+                enemy.updateAI(playerPosition: player.position, worldBounds: CGSize(width: worldWidth, height: worldHeight))
+            }
+
             enemy.updatePosition()
             
             // Bounds check
@@ -452,22 +488,16 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
             if enemy.position.x > worldWidth { enemy.position.x = worldWidth; enemy.velocity.dx *= -1 }
             if enemy.position.y < 0 { enemy.position.y = 0; enemy.velocity.dy *= -1 }
             if enemy.position.y > worldHeight { enemy.position.y = worldHeight; enemy.velocity.dy *= -1 }
-            
-            // Check collision with player - УЛУЧШЕННАЯ ЛОГИКА
-            let distance = hypot(enemy.position.x - player.position.x, enemy.position.y - player.position.y)
-            let collisionDistance = enemy.size + (player.sizeMultiplier * 25)
-            
-            if distance < collisionDistance {
+
+            let collisionDistance = enemy.size + playerCollisionRadius
+            if distanceSquared < collisionDistance * collisionDistance {
                 let playerEffectiveSize = player.sizeMultiplier * 30
                 let sizeDifference = enemy.size - playerEffectiveSize
                 
-                // Враг больше на 20% или более - игрок погибает!
                 if sizeDifference > playerEffectiveSize * 0.2 {
-                    // Enemy is bigger - player dies or loses shield
                     if player.hasShield {
                         player.removeShield()
-                        // Отталкиваем игрока при ударе в щит
-                        let knockbackAngle = atan2(player.position.y - enemy.position.y, 
+                        let knockbackAngle = atan2(player.position.y - enemy.position.y,
                                                    player.position.x - enemy.position.x)
                         player.velocity.dx += cos(knockbackAngle) * 5
                         player.velocity.dy += sin(knockbackAngle) * 5
@@ -476,17 +506,14 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
                         return
                     }
                 } else if sizeDifference < -playerEffectiveSize * 0.2 {
-                    // Player is significantly bigger - eat enemy
                     SoundManager.shared.playSound(.enemyDie, on: self)
                     enemy.die(theme: theme)
                     player.grow(amount: 0.05)
-                    score += Int(enemy.size * 2)  // Больше очков
+                    score += Int(enemy.size * 2)
                     sizeLabel.text = String(format: "Размер: %.1fx", player.sizeMultiplier)
                     fitCenteredHUDLabel(sizeLabel)
-                    fitCenteredHUDLabel(sizeLabel)
                 } else {
-                    // Примерно одинаковые - оба отталкиваются
-                    let angle = atan2(player.position.y - enemy.position.y, 
+                    let angle = atan2(player.position.y - enemy.position.y,
                                      player.position.x - enemy.position.x)
                     player.velocity.dx += cos(angle) * 3
                     player.velocity.dy += sin(angle) * 3
@@ -499,66 +526,52 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
         // Remove dead enemies
         enemies.removeAll { !$0.isAlive }
         
-        // Enemy merging
-        for i in 0..<enemies.count {
-            for j in (i+1)..<enemies.count {
-                let enemy1 = enemies[i]
-                let enemy2 = enemies[j]
-                let distance = hypot(enemy1.position.x - enemy2.position.x, enemy1.position.y - enemy2.position.y)
-                
-                if distance < (enemy1.size + enemy2.size) / 2 {
-                    // Merge smaller into larger
-                    if enemy1.size >= enemy2.size {
-                        enemy1.grow(amount: enemy2.size * 0.5)
-                        SoundManager.shared.playSound(.enemyDie, on: self)
-                        enemy2.die(theme: theme)
-                    } else {
-                        enemy2.grow(amount: enemy1.size * 0.5)
-                        SoundManager.shared.playSound(.enemyDie, on: self)
-                        enemy1.die(theme: theme)
+        // Enemy merging (throttled to avoid frame spikes)
+        if shouldRunMergeTick {
+            let pairCheckLimit = min(220, enemies.count * max(0, enemies.count - 1) / 2)
+            var checkedPairs = 0
+            var didMerge = false
+
+            outerLoop: for i in 0..<enemies.count {
+                for j in (i+1)..<enemies.count {
+                    checkedPairs += 1
+                    if checkedPairs > pairCheckLimit { break outerLoop }
+
+                    let enemy1 = enemies[i]
+                    let enemy2 = enemies[j]
+                    let distance = hypot(enemy1.position.x - enemy2.position.x, enemy1.position.y - enemy2.position.y)
+
+                    if distance < (enemy1.size + enemy2.size) / 2 {
+                        if enemy1.size >= enemy2.size {
+                            enemy1.grow(amount: enemy2.size * 0.5)
+                            SoundManager.shared.playSound(.enemyDie, on: self)
+                            enemy2.die(theme: theme)
+                        } else {
+                            enemy2.grow(amount: enemy1.size * 0.5)
+                            SoundManager.shared.playSound(.enemyDie, on: self)
+                            enemy1.die(theme: theme)
+                        }
+                        didMerge = true
+                        break outerLoop
                     }
                 }
             }
-        }
-        
-        // Update food
-        for food in foods where !food.isEaten {
-            let distance = hypot(food.position.x - player.position.x, food.position.y - player.position.y)
-            if distance < 30 {
-                food.eat()
-                player.grow(amount: 0.02)
-                sizeLabel.text = String(format: "Размер: %.1fx", player.sizeMultiplier)
-                fitCenteredHUDLabel(sizeLabel)
+
+            if didMerge {
+                enemies.removeAll { !$0.isAlive }
             }
         }
-        foods.removeAll { $0.isEaten }
         
-        // Update coins
-        for coin in coins where !coin.isCollected {
-            // Magnet effect
-            if player.magnetMultiplier > 1.0 {
-                let distance = hypot(coin.position.x - player.position.x, coin.position.y - player.position.y)
-                if distance < player.magnetRange {
-                    let dx = player.position.x - coin.position.x
-                    let dy = player.position.y - coin.position.y
-                    coin.position.x += dx * 0.1
-                    coin.position.y += dy * 0.1
-                }
-            }
-            
-            // Check collection
-            let distance = hypot(coin.position.x - player.position.x, coin.position.y - player.position.y)
-            if distance < 30 {
-                collectCoin(coin)
-            }
-        }
-        coins.removeAll { $0.isCollected }
+        updateFoodBatch()
+        updateCoinsBatch()
         
-        // Update particles
+        // Update particles (capped)
         let engineParticles = player.createEngineParticles()
-        for particle in engineParticles {
-            particles.append(particle)
-            worldNode.addChild(particle)
+        if particles.count < Performance.maxParticles {
+            for particle in engineParticles.prefix(Performance.maxParticles - particles.count) {
+                particles.append(particle)
+                worldNode.addChild(particle)
+            }
         }
         
         for particle in particles {
@@ -569,12 +582,12 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
         }
         particles.removeAll { $0.isDead }
         
-        // Update minimap
-        updateMinimap()
+        if shouldRunMinimapTick {
+            updateMinimap()
+        }
         checkVictoryCondition()
         
-        // Spawn more food if needed - больше еды в огромном мире
-        if foods.count < 100 && Double.random(in: 0...1) < 0.05 {
+        if foods.count < Performance.maxFoods && Double.random(in: 0...1) < 0.035 {
             let x = CGFloat.random(in: 200...(worldWidth - 200))
             let y = CGFloat.random(in: 200...(worldHeight - 200))
             let food = Food(position: CGPoint(x: x, y: y), theme: theme)
@@ -686,6 +699,65 @@ class Level3Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
         minimapPlayerDot.position = CGPoint(x: dotX, y: dotY)
     }
     
+    private func updateFoodBatch() {
+        guard !foods.isEmpty else { return }
+
+        let total = foods.count
+        let batchSize = min(Performance.collectibleBatchSize, total)
+        let eatDistanceSquared: CGFloat = 30 * 30
+
+        for offset in 0..<batchSize {
+            let index = (collectibleCursor + offset) % total
+            let food = foods[index]
+            guard !food.isEaten else { continue }
+
+            let dx = food.position.x - player.position.x
+            let dy = food.position.y - player.position.y
+            if dx * dx + dy * dy < eatDistanceSquared {
+                food.eat()
+                player.grow(amount: 0.02)
+                sizeLabel.text = String(format: "Размер: %.1fx", player.sizeMultiplier)
+                fitCenteredHUDLabel(sizeLabel)
+            }
+        }
+
+        collectibleCursor = (collectibleCursor + batchSize) % max(1, total)
+        foods.removeAll { $0.isEaten }
+        collectibleCursor = min(collectibleCursor, max(0, foods.count - 1))
+    }
+
+    private func updateCoinsBatch() {
+        guard !coins.isEmpty else { return }
+
+        let total = coins.count
+        let batchSize = min(Performance.collectibleBatchSize, total)
+        let collectDistanceSquared: CGFloat = 30 * 30
+        let magnetRangeSquared = player.magnetRange * player.magnetRange
+
+        for offset in 0..<batchSize {
+            let index = (coinCursor + offset) % total
+            let coin = coins[index]
+            guard !coin.isCollected else { continue }
+
+            let dx = player.position.x - coin.position.x
+            let dy = player.position.y - coin.position.y
+            let distanceSquared = dx * dx + dy * dy
+
+            if player.magnetMultiplier > 1.0, distanceSquared < magnetRangeSquared {
+                coin.position.x += dx * 0.1
+                coin.position.y += dy * 0.1
+            }
+
+            if distanceSquared < collectDistanceSquared {
+                collectCoin(coin)
+            }
+        }
+
+        coinCursor = (coinCursor + batchSize) % max(1, total)
+        coins.removeAll { $0.isCollected }
+        coinCursor = min(coinCursor, max(0, coins.count - 1))
+    }
+
     private func collectCoin(_ coin: Coin) {
         coin.collect()
         totalCoins += 1

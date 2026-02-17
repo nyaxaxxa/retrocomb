@@ -42,6 +42,12 @@ final class Level6Scene: SKScene {
         static let obstacleWidthRange: ClosedRange<CGFloat> = 80...210
         static let scrollSpeed: CGFloat = 230
         static let rescueDistance: CGFloat = 4200
+
+        static let maxActiveEnemies = 14
+        static let maxActiveObstacles = 10
+        static let maxActiveBullets = 16
+        static let maxActiveAmmoPickups = 4
+        static let hudRefreshInterval: TimeInterval = 1.0 / 15.0
     }
 
     private enum EnemyKind: CaseIterable {
@@ -140,6 +146,7 @@ final class Level6Scene: SKScene {
     private var ammoTimer: TimeInterval = 5.5
     private var fireCooldown: TimeInterval = 0
     private var lastUpdateTime: TimeInterval = 0
+    private var hudRefreshAccumulator: TimeInterval = 0
 
     private var health: Int = Config.heroMaxHealth
     private var score: Int = 0
@@ -178,8 +185,10 @@ final class Level6Scene: SKScene {
         // Запускаем фоновую музыку
         SoundManager.shared.playBackgroundMusic(fileName: "retro_music.mp3")
 
-        let widthScale = size.width / GameConfig.screenWidth
-        let heightScale = size.height / GameConfig.screenHeight
+        let referenceWidth: CGFloat = max(320, view.bounds.width)
+        let referenceHeight: CGFloat = max(568, view.bounds.height)
+        let widthScale = size.width / referenceWidth
+        let heightScale = size.height / referenceHeight
         scaleFactor = max(0.75, min(1.5, min(widthScale, heightScale)))
         ammo = Config.initialAmmo
         distanceTraveled = 0
@@ -192,6 +201,15 @@ final class Level6Scene: SKScene {
         enemies.removeAll()
 
         configureScene()
+        setupHUD()
+        setupControls()
+    }
+
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard oldSize != size, view != nil else { return }
+        safeInsets = view?.safeAreaInsets ?? .zero
+        buildBackdrop()
         setupHUD()
         setupControls()
     }
@@ -368,9 +386,10 @@ final class Level6Scene: SKScene {
         backpack.position = CGPoint(x: -heroSize.width * 0.25, y: heroSize.height * 0.1)
         hero.addChild(backpack)
 
-        backpackFlame = SKNode()
-        backpackFlame?.position = CGPoint(x: -heroSize.width * 0.45, y: heroSize.height * 0.05)
-        hero.addChild(backpackFlame!)
+        let flameNode = SKNode()
+        flameNode.position = CGPoint(x: -heroSize.width * 0.45, y: heroSize.height * 0.05)
+        backpackFlame = flameNode
+        hero.addChild(flameNode)
         startFlameAnimation()
         backpackFlame?.isHidden = true
 
@@ -539,6 +558,7 @@ final class Level6Scene: SKScene {
 
         let deltaTime = max(0.001, lastUpdateTime == 0 ? 0.016 : currentTime - lastUpdateTime)
         lastUpdateTime = currentTime
+        hudRefreshAccumulator += deltaTime
 
         updateFireCooldown(deltaTime: deltaTime)
         updateHero(deltaTime: deltaTime)
@@ -568,7 +588,10 @@ final class Level6Scene: SKScene {
         }
 
         evaluateWinLose()
-        updateHUD()
+        if hudRefreshAccumulator >= Config.hudRefreshInterval {
+            hudRefreshAccumulator = 0
+            updateHUD()
+        }
     }
 
     private func updateFireCooldown(deltaTime: TimeInterval) {
@@ -681,6 +704,8 @@ final class Level6Scene: SKScene {
     }
 
     private func spawnObstacle() {
+        guard obstacles.count < Config.maxActiveObstacles else { return }
+
         let width = CGFloat.random(in: Config.obstacleWidthRange) * scaleFactor
         let height = CGFloat.random(in: Config.obstacleHeightRange) * scaleFactor
         let obstacle = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 12 * scaleFactor)
@@ -714,6 +739,8 @@ final class Level6Scene: SKScene {
     }
 
     private func spawnAmmoPickup() {
+        guard ammoPickups.count < Config.maxActiveAmmoPickups else { return }
+
         let pickupSize = CGSize(width: 36 * scaleFactor, height: 36 * scaleFactor)
         let pickup = SKShapeNode(rectOf: pickupSize, cornerRadius: 6 * scaleFactor)
         pickup.fillColor = theme.skAccent.withAlphaComponent(0.9)
@@ -751,6 +778,8 @@ final class Level6Scene: SKScene {
     }
 
     private func spawnEnemy() {
+        guard enemies.count < Config.maxActiveEnemies else { return }
+
         let kind = EnemyKind.allCases.randomElement() ?? .crawler
         let node = SKSpriteNode(color: .clear, size: enemySize)
         node.anchorPoint = CGPoint(x: 0.5, y: 0.5)
@@ -785,9 +814,10 @@ final class Level6Scene: SKScene {
         leftHorn.lineWidth = max(2, 3 * scaleFactor)
         body.addChild(leftHorn)
 
-        let rightHorn = leftHorn.copy() as! SKShapeNode
-        rightHorn.xScale = -1
-        body.addChild(rightHorn)
+        if let rightHorn = leftHorn.copy() as? SKShapeNode {
+            rightHorn.xScale = -1
+            body.addChild(rightHorn)
+        }
 
         let eyeRadius = enemySize.width * 0.13
         let leftEye = SKShapeNode(circleOfRadius: eyeRadius)
@@ -797,9 +827,12 @@ final class Level6Scene: SKScene {
         leftEye.position = CGPoint(x: -bodyWidth * 0.2, y: eyeRadius * 1.4)
         body.addChild(leftEye)
 
-        let rightEye = leftEye.copy() as! SKShapeNode
-        rightEye.position.x = bodyWidth * 0.2
-        body.addChild(rightEye)
+        var rightEye: SKShapeNode?
+        if let copiedRightEye = leftEye.copy() as? SKShapeNode {
+            copiedRightEye.position.x = bodyWidth * 0.2
+            body.addChild(copiedRightEye)
+            rightEye = copiedRightEye
+        }
 
         let pupilRadius = eyeRadius * 0.45
         let leftPupil = SKShapeNode(circleOfRadius: pupilRadius)
@@ -808,8 +841,9 @@ final class Level6Scene: SKScene {
         leftPupil.position = CGPoint(x: 0, y: -pupilRadius * 0.2)
         leftEye.addChild(leftPupil)
 
-        let rightPupil = leftPupil.copy() as! SKShapeNode
-        rightEye.addChild(rightPupil)
+        if let copiedRightPupil = leftPupil.copy() as? SKShapeNode {
+            rightEye?.addChild(copiedRightPupil)
+        }
 
         let mouth = SKShapeNode(rectOf: CGSize(width: bodyWidth * 0.46, height: enemySize.height * 0.18), cornerRadius: enemySize.height * 0.08)
         mouth.fillColor = theme.skBackground.withAlphaComponent(0.7)
@@ -842,6 +876,7 @@ final class Level6Scene: SKScene {
     private func fireWeapon() {
         guard fireCooldown <= 0 else { return }
         guard ammo > 0 else { return }
+        guard bullets.count < Config.maxActiveBullets else { return }
         let speedFactor = max(0.8, min(1.2, difficulty.speedMultiplier))
         fireCooldown = Config.fireCooldown / TimeInterval(speedFactor)
         ammo -= 1
