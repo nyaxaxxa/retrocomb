@@ -1,81 +1,72 @@
-# 🚀 Space Flappy Game
+# RetroComb (iOS SpriteKit)
 
-Космическая игра в стиле Flappy Bird с тремя уникальными уровнями.
+RetroComb is a native iOS arcade game built with **Swift + SpriteKit**.
 
-## 📁 Структура проекта
+> This repository is an Xcode iOS project (not a JavaScript/web game).
 
+## What’s in the game
+
+The game currently contains multiple arcade-style levels/scenes (including flappy, top-down, open-world/survival, and additional challenge modes), shared progression systems, retro visual effects, and generated/managed sound.
+
+Main code is in:
+- `retrocomb/` (game scenes, game systems, audio, config)
+- `retrocomb.xcodeproj/` (Xcode project)
+
+## Requirements
+
+- macOS with Xcode
+- Xcode 16+ (recommended for current project settings)
+- iOS deployment target in project: **18.4** (`project.pbxproj`)
+
+## Run locally (Xcode)
+
+1. Open project:
+   - `open retrocomb.xcodeproj`
+2. Select scheme: `retrocomb`
+3. Select simulator or physical iPhone
+4. Press **Run** (`Cmd+R`)
+
+## Build from CLI (optional)
+
+```bash
+# From repo root
+xcodebuild \
+  -project retrocomb.xcodeproj \
+  -scheme retrocomb \
+  -configuration Debug \
+  -destination 'platform=iOS Simulator,name=iPhone 15' \
+  build
 ```
-space_flappy_game/
-├── index.html              # Главная HTML страница
-├── css/
-│   └── styles.css         # Все стили игры
-├── js/
-│   ├── config.js          # Константы, темы, настройки
-│   ├── classes/
-│   │   ├── Player.js      # Класс игрока
-│   │   ├── Pipe.js        # Класс препятствий
-│   │   ├── Coin.js        # Класс монет
-│   │   └── Particle.js    # Класс частиц
-│   ├── Game.js            # Основная логика игры
-│   └── main.js            # Точка входа, инициализация
-└── assets/                # Будущие ресурсы для iOS
 
+For Release build:
+
+```bash
+xcodebuild \
+  -project retrocomb.xcodeproj \
+  -scheme retrocomb \
+  -configuration Release \
+  -destination 'generic/platform=iOS' \
+  build
 ```
 
-## 🎮 Уровни
+## Release device target
 
-### Уровень 1: Classic Flappy
-- Классический геймплей
-- Управление: SPACE или ЛКМ
-- Цель: набрать 50+ очков для перехода на уровень 2
+For release readiness, smoke-test on:
+- iPhone 12
+- iPhone 13
+- iPhone 14
+- iPhone 15
 
-### Уровень 2: Top-Down
-- Вид сверху, уклонение от астероидов
-- Управление: A/D или стрелки влево/вправо
-- Цель: набрать 25+ очков для перехода на уровень 3
+See `RELEASE_CHECKLIST.md` for the exact matrix and pass/fail criteria.
 
-### Уровень 3: Open Space
-- Большой мир 2000×1500
-- Управление: WASD во все стороны
-- Враги объединяются и охотятся за игроком
-- Инертное управление кораблём
+## Known limitations (current)
 
-## 🎨 Цветовые схемы
+- iPhone + iPad families are enabled in project settings, but release smoke matrix is currently iPhone-focused (12/13/14/15).
+- UI/UX and gameplay complexity differ by scene; transitions and performance must be validated on real devices before TestFlight/App Store submission.
+- Logging is currently simple (`print(...)` in some components). For release logging expectations, see `LOGGING_POLICY.md`.
 
-- 🟢 Classic Green (по умолчанию)
-- 🔵 Cyber Cyan
-- 🟣 Neon Magenta  
-- 🔴 Fire Orange
-- ⚪ Retro White
+## QA / release docs
 
-## 🔧 Чит-коды
-
-Введите код в поле на стартовом экране:
-- `1` - начать с уровня 1
-- `2` - начать с уровня 2
-- `3` - начать с уровня 3
-
-## 🛠️ Технологии
-
-- Vanilla JavaScript (ES6+)
-- Canvas API
-- CSS Variables для тем
-- LocalStorage для сохранения
-
-## 📱 iOS Конвертация
-
-Проект готов к конвертации в iOS приложение через:
-- Apache Cordova / Capacitor
-- React Native WebView
-- WKWebView нативно
-
-## 🎯 Особенности
-
-- 5 уровней сложности
-- Система апгрейдов
-- AI режим (автоигра)
-- Таблица лидеров
-- Мини-карта на уровне 3
-- Частицы двигателя
-- Система щитов
-
+- `RELEASE_CHECKLIST.md` — manual smoke-test matrix and preflight checks
+- `LOGGING_POLICY.md` — minimal DEBUG vs RELEASE logging policy
+- `APP_STORE_PUBLICATION.md` / `QUICK_PUBLICATION_GUIDE.md` — publication guidance
