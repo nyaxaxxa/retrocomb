@@ -54,13 +54,14 @@ class MenuScene: SKScene {
         )
         addChild(title)
         
-        let glowNode = title.copy() as! SKLabelNode
-        glowNode.fontColor = theme.skAccent
-        glowNode.alpha = 0.5
-        glowNode.setScale(1.02)
-        glowNode.zPosition = title.zPosition - 1
-        glowNode.position = title.position
-        addChild(glowNode)
+        if let glowNode = title.copy() as? SKLabelNode {
+            glowNode.fontColor = theme.skAccent
+            glowNode.alpha = 0.5
+            glowNode.setScale(1.02)
+            glowNode.zPosition = title.zPosition - 1
+            glowNode.position = title.position
+            addChild(glowNode)
+        }
         
         let subtitle = SKLabelNode(fontNamed: "Courier")
         subtitle.text = "[ ULTRA RETRO ARCADE ]"
@@ -153,11 +154,12 @@ class MenuScene: SKScene {
         label.position = .zero
         background.addChild(label)
         
-        let shadow = label.copy() as! SKLabelNode
-        shadow.fontColor = theme.skAccent.withAlphaComponent(0.3)
-        shadow.position = CGPoint(x: 0, y: -2)
-        shadow.zPosition = -1
-        background.addChild(shadow)
+        if let shadow = label.copy() as? SKLabelNode {
+            shadow.fontColor = theme.skAccent.withAlphaComponent(0.3)
+            shadow.position = CGPoint(x: 0, y: -2)
+            shadow.zPosition = -1
+            background.addChild(shadow)
+        }
         
         let pulse = SKAction.sequence([
             SKAction.scale(to: 1.04, duration: 1.0),

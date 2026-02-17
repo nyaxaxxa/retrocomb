@@ -38,11 +38,14 @@ class Food: SKShapeNode {
         let scaleUp = SKAction.scale(to: 1.2, duration: 0.5)
         let scaleDown = SKAction.scale(to: 1.0, duration: 0.5)
         pulseAction = SKAction.repeatForever(SKAction.sequence([scaleUp, scaleDown]))
-        self.run(pulseAction!)
+        if let pulseAction {
+            self.run(pulseAction)
+        }
     }
     
     required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        assertionFailure("init(coder:) is not supported for runtime-instantiated nodes")
+        return nil
     }
     
     func eat() {

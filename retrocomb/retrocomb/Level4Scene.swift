@@ -338,7 +338,11 @@ class Level4Scene: SKScene, SKPhysicsContactDelegate {
         terrainPoints.append(CGPoint(x: worldWidth + 300, y: baseY))
         
         let path = CGMutablePath()
-        path.move(to: terrainPoints.first!)
+        guard let firstTerrainPoint = terrainPoints.first else {
+            assertionFailure("Level4Scene: terrain generation produced no points")
+            return
+        }
+        path.move(to: firstTerrainPoint)
         for point in terrainPoints.dropFirst() {
             path.addLine(to: point)
         }
@@ -362,7 +366,11 @@ class Level4Scene: SKScene, SKPhysicsContactDelegate {
         addChild(worldNode)
         
         let groundBodyPath = CGMutablePath()
-        groundBodyPath.move(to: terrainPoints.first!)
+        guard let groundStart = terrainPoints.first else {
+            assertionFailure("Level4Scene: missing terrain start point for physics body")
+            return
+        }
+        groundBodyPath.move(to: groundStart)
         for point in terrainPoints.dropFirst() {
             groundBodyPath.addLine(to: point)
         }

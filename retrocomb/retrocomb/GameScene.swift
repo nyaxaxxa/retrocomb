@@ -44,7 +44,7 @@ class GameScene: SKScene {
     
     
     func touchDown(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
+        if let n = self.spinnyNode?.copy() as? SKShapeNode {
             n.position = pos
             n.strokeColor = SKColor.green
             self.addChild(n)
@@ -52,7 +52,7 @@ class GameScene: SKScene {
     }
     
     func touchMoved(toPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
+        if let n = self.spinnyNode?.copy() as? SKShapeNode {
             n.position = pos
             n.strokeColor = SKColor.blue
             self.addChild(n)
@@ -60,7 +60,7 @@ class GameScene: SKScene {
     }
     
     func touchUp(atPoint pos : CGPoint) {
-        if let n = self.spinnyNode?.copy() as! SKShapeNode? {
+        if let n = self.spinnyNode?.copy() as? SKShapeNode {
             n.position = pos
             n.strokeColor = SKColor.red
             self.addChild(n)
@@ -69,7 +69,9 @@ class GameScene: SKScene {
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         if let label = self.label {
-            label.run(SKAction.init(named: "Pulse")!, withKey: "fadeInOut")
+            if let pulse = SKAction(named: "Pulse") {
+                label.run(pulse, withKey: "fadeInOut")
+            }
         }
         
         for t in touches { self.touchDown(atPoint: t.location(in: self)) }

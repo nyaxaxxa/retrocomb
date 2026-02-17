@@ -31,7 +31,8 @@ final class CutsceneScene: SKScene {
     }
     
     required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        assertionFailure("init(coder:) is not supported for runtime-instantiated nodes")
+        return nil
     }
     
     override func didMove(to view: SKView) {

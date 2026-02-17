@@ -48,7 +48,8 @@ class Enemy: SKShapeNode {
     }
     
     required init?(coder aDecoder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        assertionFailure("init(coder:) is not supported for runtime-instantiated nodes")
+        return nil
     }
     
     func updateAI(playerPosition: CGPoint, worldBounds: CGSize) {
