@@ -19,21 +19,28 @@ enum DesignTextStyle {
 
 struct DesignSystem {
     
+    // Оптимизированные отступы для лучшей адаптивности на разных устройствах
     static let layoutHorizontalPadding: CGFloat = 24
     static let layoutVerticalPadding: CGFloat = 20
     static let layoutInterItemSpacing: CGFloat = 18
     static let maxReadableWidth: CGFloat = 520
+    // Оптимизированный размер кнопки для лучшей читаемости и удобства нажатия
     static let buttonSize = CGSize(width: 320, height: 64)  // Базовый размер, используйте adaptiveButtonSize для адаптивности
     static let buttonContentInset: CGFloat = 24
     static let cardCornerRadius: CGFloat = 20
     static let overlayOpacity: CGFloat = 0.85
     
+    /// Оптимизированная минимальная ширина кнопки для маленьких экранов
+    static let minButtonWidthSmall: CGFloat = 240
+    static let minButtonWidthLarge: CGFloat = 260
+    
     /// Адаптивный размер кнопки, учитывающий размер экрана и safeAreaInsets
+    /// Оптимизирован для лучшей читаемости и удобства использования на всех устройствах
     static func adaptiveButtonSize(for scene: SKScene) -> CGSize {
         let insets = scene.view?.safeAreaInsets ?? .zero
         let availableWidth = scene.size.width - insets.left - insets.right - layoutHorizontalPadding * 2
-        // Адаптивная минимальная ширина: 240px для маленьких экранов, 260px для больших
-        let minButtonWidth: CGFloat = availableWidth < 350 ? 240 : 260
+        // Адаптивная минимальная ширина: оптимизирована для разных размеров экранов
+        let minButtonWidth: CGFloat = availableWidth < 350 ? minButtonWidthSmall : minButtonWidthLarge
         let maxButtonWidth = min(buttonSize.width, max(minButtonWidth, availableWidth * 0.9))
         let buttonWidth = max(minButtonWidth, maxButtonWidth)
         return CGSize(width: buttonWidth, height: buttonSize.height)

@@ -678,7 +678,8 @@ class Level5Scene: SKScene {
         spawnAccumulator = 0
         if let info = currentWaveInfo {
             score += info.enemyCount * 10
-            resources += 40 + info.waveNumber * 8
+            // Уменьшены награды за волны для большей сложности
+            resources += 25 + info.waveNumber * 5  // Было 40 + info.waveNumber * 8
             showMessage("Волна \(info.waveNumber) отбита")
             if info.waveNumber >= GameConfig.Level6.waveRequirementForUnlock && !awaitingTransitionChoice && !hasTransitionedToLevel6 {
                 awaitingTransitionChoice = true

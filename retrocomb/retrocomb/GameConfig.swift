@@ -83,17 +83,17 @@ class GameConfig {
     
     // Level 5 - Tower Defense (BASE BUILDER)
     struct Level5 {
-        static let gridSize: CGFloat = 40
+        static let gridSize: CGFloat = 30  // Уменьшен масштаб с 40 до 30
         static let gridWidth: Int = 15
         static let gridHeight: Int = 20
-        static let baseHealth = 350
-        static let startingResources = 200  // Больше ресурсов для старта
-        static let startingEnergy = 80
-        static let minWaveInterval: TimeInterval = 1.5
-        static let maxWaveInterval: TimeInterval = 3.0
-        static let initialWaveDelay: TimeInterval = 2.5
-        static let generatorTickValue = 5
-        static let mineTickValue = 8
+        static let baseHealth = 250  // Уменьшено здоровье базы для большей сложности
+        static let startingResources = 120  // Уменьшены стартовые ресурсы
+        static let startingEnergy = 50  // Уменьшена стартовая энергия
+        static let minWaveInterval: TimeInterval = 1.0  // Волны чаще
+        static let maxWaveInterval: TimeInterval = 2.0  // Волны чаще
+        static let initialWaveDelay: TimeInterval = 1.5  // Меньше времени на подготовку
+        static let generatorTickValue = 4  // Меньше энергии за тик
+        static let mineTickValue = 6  // Меньше ресурсов за тик
         static let incomeTickInterval: TimeInterval = 1.0
     }
     

@@ -87,7 +87,7 @@ class Level1Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
         let topY = size.height - safeInsets.top - DesignSystem.layoutVerticalPadding
         let leftX = safeInsets.left + DesignSystem.layoutHorizontalPadding
         let rightX = size.width - safeInsets.right - DesignSystem.layoutHorizontalPadding
-            let centerX = size.width / 2 + (safeInsets.left - safeInsets.right) / 2
+        let centerX = size.width / 2 + (safeInsets.left - safeInsets.right) / 2
         
         // Score label
         scoreLabel = SKLabelNode(fontNamed: "Courier-Bold")

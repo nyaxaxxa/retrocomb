@@ -12,8 +12,8 @@ class SoundManager {
     static let shared = SoundManager()
     
     private var backgroundMusicPlayer: AVAudioPlayer?
-    private var isMusicEnabled = true
-    private var isSoundEnabled = true
+    private var isMusicEnabled = true  // Звуки включены по умолчанию
+    private var isSoundEnabled = true  // Звуки включены по умолчанию
     
     // Кэш для активных звуковых плееров
     private var soundPlayers: [String: AVAudioPlayer] = [:]
@@ -24,16 +24,24 @@ class SoundManager {
     
     private func setupAudioSession() {
         do {
-            try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+            // Используем .playback для более надежного воспроизведения звуков
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("⚠️ SoundManager: Failed to setup audio session: \(error)")
+            // Пробуем альтернативный вариант
+            do {
+                try AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+                try AVAudioSession.sharedInstance().setActive(true)
+            } catch {
+                print("⚠️ SoundManager: Failed to setup audio session with ambient category: \(error)")
+            }
         }
     }
     
     // MARK: - Background Music
     
-    func playBackgroundMusic(fileName: String, volume: Float = 0.3) {
+    func playBackgroundMusic(fileName: String, volume: Float = 0.4) {
         guard isMusicEnabled else { return }
         
         stopBackgroundMusic()
@@ -57,7 +65,14 @@ class SoundManager {
             backgroundMusicPlayer = try AVAudioPlayer(contentsOf: tempURL)
             backgroundMusicPlayer?.numberOfLoops = -1  // Бесконечный цикл
             backgroundMusicPlayer?.volume = volume
+            backgroundMusicPlayer?.prepareToPlay()
             backgroundMusicPlayer?.play()
+            
+            // Проверяем, что музыка действительно играет
+            if backgroundMusicPlayer?.isPlaying == false {
+                print("⚠️ SoundManager: Музыка не воспроизводится, пробуем еще раз...")
+                backgroundMusicPlayer?.play()
+            }
         } catch {
             print("⚠️ SoundManager: Ошибка воспроизведения музыки: \(error)")
         }
@@ -99,7 +114,7 @@ class SoundManager {
             try soundData.write(to: tempURL)
             let player = try AVAudioPlayer(contentsOf: tempURL)
             player.numberOfLoops = -1  // Бесконечный цикл
-            player.volume = 0.3
+            player.volume = 0.35  // Восстановленная громкость для звука двигателя
             player.prepareToPlay()
             player.play()
             engineLoopPlayer = player
@@ -116,11 +131,15 @@ class SoundManager {
     // MARK: - Sound Effects
     
     func playSound(_ soundType: SoundType, on node: SKNode? = nil) {
-        guard isSoundEnabled else { return }
+        guard isSoundEnabled else {
+            print("⚠️ SoundManager: Звуки отключены, пропускаем \(soundType)")
+            return
+        }
         
         // Генерируем звук программно в стиле NES/SNES
         let generator = getSoundGenerator(for: soundType)
         guard let soundData = generator() else {
+            print("⚠️ SoundManager: Не удалось сгенерировать звук \(soundType), используем fallback")
             // Если генерация не удалась, пробуем использовать файл
             fallbackToSKAction(soundType: soundType, node: node)
             return
@@ -134,8 +153,15 @@ class SoundManager {
             try soundData.write(to: tempURL)
             let player = try AVAudioPlayer(contentsOf: tempURL)
             player.prepareToPlay()
-            player.volume = 0.6
+            // Восстановленная громкость звуковых эффектов
+            player.volume = soundType == .explosion || soundType == .die ? 0.8 : 0.7
             player.play()
+            
+            // Проверяем, что звук действительно играет
+            if !player.isPlaying {
+                print("⚠️ SoundManager: Звук \(soundType) не воспроизводится, пробуем еще раз...")
+                player.play()
+            }
             
             // Сохраняем ссылку, чтобы не удалился до окончания воспроизведения
             let fileName = tempURL.lastPathComponent

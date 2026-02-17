@@ -550,6 +550,9 @@ class Level2Scene: SKScene, @preconcurrency SKPhysicsContactDelegate {
     private func levelComplete() {
         isGameOver = true
         
+        // Звук успешного прохождения уровня
+        SoundManager.shared.playSound(.levelComplete, on: self)
+        
         // Update data (НЕ в AI режиме!)
         GameData.shared.updateHighScore(score, isAIMode: isAIMode)
         GameData.shared.updateLevelRecord(level: 2, score: score, isAIMode: isAIMode)

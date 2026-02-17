@@ -29,7 +29,8 @@ class WaveSystem {
         if wave >= 3 { availableTypes.append(.disruptor) }
         if wave >= 4 { availableTypes.append(.tank) }
         
-        let baseCount = 8 + wave * 3
+        // Увеличено количество врагов для большей сложности
+        let baseCount = 10 + wave * 4  // Было 8 + wave * 3
         var types: [TowerDefenseEnemy.EnemyType] = []
         types.reserveCapacity(baseCount)
         
@@ -45,7 +46,8 @@ class WaveSystem {
             types.append(.boss)
         }
         
-        let spawnInterval = max(0.35, 1.2 - Double(wave) * 0.08)
+        // Уменьшен интервал спавна врагов для большей интенсивности
+        let spawnInterval = max(0.25, 1.0 - Double(wave) * 0.1)  // Было max(0.35, 1.2 - Double(wave) * 0.08)
         return WaveInfo(waveNumber: wave, enemyTypes: types, spawnInterval: spawnInterval)
     }
 }

@@ -27,41 +27,41 @@ class TowerDefenseEnemy: SKShapeNode {
         
         var baseHealth: Int {
             switch self {
-            case .scout: return 70
-            case .bruiser: return 120
-            case .tank: return 220
-            case .disruptor: return 150
-            case .boss: return 500
+            case .scout: return 85  // Увеличено с 70
+            case .bruiser: return 140  // Увеличено с 120
+            case .tank: return 260  // Увеличено с 220
+            case .disruptor: return 175  // Увеличено с 150
+            case .boss: return 600  // Увеличено с 500
             }
         }
         
         var healthGrowth: Int {
             switch self {
-            case .scout: return 12
-            case .bruiser: return 20
-            case .tank: return 32
-            case .disruptor: return 24
-            case .boss: return 60
+            case .scout: return 15  // Увеличено с 12
+            case .bruiser: return 24  // Увеличено с 20
+            case .tank: return 38  // Увеличено с 32
+            case .disruptor: return 28  // Увеличено с 24
+            case .boss: return 75  // Увеличено с 60
             }
         }
         
         var baseDamage: Int {
             switch self {
-            case .scout: return 10
-            case .bruiser: return 18
-            case .tank: return 28
-            case .disruptor: return 16
-            case .boss: return 45
+            case .scout: return 12  // Увеличено с 10
+            case .bruiser: return 22  // Увеличено с 18
+            case .tank: return 35  // Увеличено с 28
+            case .disruptor: return 20  // Увеличено с 16
+            case .boss: return 55  // Увеличено с 45
             }
         }
         
         var damageGrowth: Int {
             switch self {
-            case .scout: return 2
-            case .bruiser: return 3
-            case .tank: return 5
-            case .disruptor: return 3
-            case .boss: return 8
+            case .scout: return 3  // Увеличено с 2
+            case .bruiser: return 4  // Увеличено с 3
+            case .tank: return 6  // Увеличено с 5
+            case .disruptor: return 4  // Увеличено с 3
+            case .boss: return 10  // Увеличено с 8
             }
         }
         
@@ -132,7 +132,8 @@ class TowerDefenseEnemy: SKShapeNode {
         self.damage = type.baseDamage + wave * type.damageGrowth
         self.rewardResources = type.reward
         self.scoreValue = type.scoreValue
-        self.enemySize = 18 * type.sizeMultiplier
+        // Уменьшен размер врагов пропорционально уменьшению gridSize (с 40 до 30 = 0.75)
+        self.enemySize = 14 * type.sizeMultiplier  // Было 18, теперь 14 (уменьшено на ~22%)
         
         super.init()
         
